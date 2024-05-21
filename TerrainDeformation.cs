@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-public class FootprintGenerator : MonoBehaviour
+public class TerrainDeformation : MonoBehaviour
 {
     [SerializeField] Terrain terrain;
     [Range(0.001f, 0.1f)] [SerializeField] float strength;
@@ -28,17 +28,29 @@ public class FootprintGenerator : MonoBehaviour
         terrainData.SetHeights(0, 0, originalHeights);
     }
 
-    private void Update() 
+    public void LowerTerrain(Vector3 worldPosition, float strength, int radius, int width, int height, float playerRotation)
     {
-        RaycastHit hit;
-        if(Physics.Raycast(transform.position + transform.up, Vector3.down, out hit, 0.5f))
+        var brushPosition = GetBrushPosition(worldPosition, radius);
+        var brushRadius = GetSafeBrushRadius(brushPosition.x, brushPosition.y, radius);
+ 
+        var heights = terrainData.GetHeights(brushPosition.x, brushPosition.y, brushRadius * 2, brushRadius * 2);
+ 
+        for (var y = 0; y < brushRadius * 2; y++)
         {
-            if(hit.collider.GetComponent<Terrain>() == terrain)
+            for (var x = 0; x < brushRadius * 2; x++)
             {
-                LowerTerrain(hit.point, strength, radius, width, height, player.eulerAngles.y);
+                float r1 = (Mathf.Cos(Mathf.Deg2Rad * (360 - playerRotation)) * (x - brushRadius) + Mathf.Sin(Mathf.Deg2Rad * (360 - playerRotation)) * (y - brushRadius)) / width;
+                float r2 = (Mathf.Sin(Mathf.Deg2Rad * (360 - playerRotation)) * (x - brushRadius) - Mathf.Cos(Mathf.Deg2Rad * (360 - playerRotation)) * (y - brushRadius)) / height;
+
+                if (Mathf.Pow(r1, 2) + Mathf.Pow(r2, 2) <= 1)
+                {
+                    heights[y, x] -= strength * Time.deltaTime;
+                    if(heights[y, x] <= lowestHeight) return;
+                }
             }
         }
-
+ 
+        terrainData.SetHeightsDelayLOD(brushPosition.x, brushPosition.y, heights);
     }
 
     private Vector3 WorldToTerrainPosition(Vector3 worldPosition)
@@ -62,31 +74,6 @@ public class FootprintGenerator : MonoBehaviour
         while(heightmapResolution - (brushX + radius*2) < 0 || heightmapResolution - (brushY + radius*2) < 0) radius--;
 
         return radius;
-    }
-
-    private void LowerTerrain(Vector3 worldPosition, float strength, int radius, int width, int height, float playerRotation)
-    {
-        var brushPosition = GetBrushPosition(worldPosition, radius);
-        var brushRadius = GetSafeBrushRadius(brushPosition.x, brushPosition.y, radius);
- 
-        var heights = terrainData.GetHeights(brushPosition.x, brushPosition.y, brushRadius * 2, brushRadius * 2);
- 
-        for (var y = 0; y < brushRadius * 2; y++)
-        {
-            for (var x = 0; x < brushRadius * 2; x++)
-            {
-                float r1 = (Mathf.Cos(Mathf.Deg2Rad * (360 - playerRotation)) * (x - brushRadius) + Mathf.Sin(Mathf.Deg2Rad * (360 - playerRotation)) * (y - brushRadius)) / width;
-                float r2 = (Mathf.Sin(Mathf.Deg2Rad * (360 - playerRotation)) * (x - brushRadius) - Mathf.Cos(Mathf.Deg2Rad * (360 - playerRotation)) * (y - brushRadius)) / height;
-
-                if (Mathf.Pow(r1, 2) + Mathf.Pow(r2, 2) <= 1)
-                {
-                    heights[y, x] -= strength * Time.deltaTime;
-                    if(heights[y, x] <= lowestHeight) return;
-                }
-            }
-        }
- 
-        terrainData.SetHeightsDelayLOD(brushPosition.x, brushPosition.y, heights);
     }
 }
 
