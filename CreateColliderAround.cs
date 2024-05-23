@@ -36,7 +36,7 @@ public class CreateColliderAround : MonoBehaviour
         BoxCollider boxCollider = center.AddComponent<BoxCollider>();
         boxCollider.size = bound.size;
 
-        //Reparenting all children in the new GameObject
+        //Reparent all children in the new GameObject
         Transform[] children = new Transform[transform.childCount];
         for(int i = 0; i < transform.childCount; i++)
         {
